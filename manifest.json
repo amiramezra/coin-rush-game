@@ -1,0 +1,11 @@
+{
+  "name": "מרוץ המטבעות",
+  "short_name": "מרוץ המטבעות",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#101b32",
+  "theme_color": "#101b32",
+  "description": "משחק מרוץ פשוט לאיסוף מטבעות"
+}
