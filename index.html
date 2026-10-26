@@ -1,53 +1,276 @@
-<!doctype html>
-<html lang="he" dir="rtl">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#101b32"><title>מרוץ המטבעות</title>
-<link rel="manifest" href="manifest.json">
-<style>
-*{box-sizing:border-box}body{margin:0;background:#101b32;color:#fff;font-family:Arial,sans-serif}
-main{max-width:500px;margin:auto;padding:12px;display:grid;gap:10px}h1{text-align:center;margin:5px 0;font-size:26px}
-.hud{display:flex;justify-content:space-between;background:#1e2d4d;border-radius:12px;padding:11px;font-weight:bold}
-canvas{display:block;width:100%;height:auto;aspect-ratio:360/540;border-radius:16px;touch-action:none;background:#8be0ff}
-button{border:0;border-radius:12px;padding:14px 8px;font-weight:bold;font-size:16px;background:#facc15;color:#172033}
-#start{background:#34d399}.controls{display:flex;gap:8px}.controls button{flex:1}
-p{margin:0;text-align:center;color:#dbeafe;font-size:13px;line-height:1.5}
-</style></head>
-<body><main>
-<h1>🏁 מרוץ המטבעות</h1><p>זוזו בין הנתיבים, קפצו מעל מכשולים ואספו מטבעות!</p>
-<div class="hud"><span>🪙 <b id="coins">0</b></span><span>🏆 שיא <b id="best">0</b></span><span>📏 <b id="distance">0</b> מ׳</span></div>
-<canvas id="game" width="360" height="540"></canvas>
-<button id="start">התחל משחק</button>
-<div class="controls"><button id="left">⬅ שמאלה</button><button id="jump">⬆ קפיצה</button><button id="right">ימינה ➡</button></div>
-<p>אפשר גם להחליק על המסך. השיא נשמר במכשיר הזה.</p>
-</main>
-<script>
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),$=id=>document.getElementById(id);
-let active=false,lane=1,coins=0,dist=0,speed=3,items=[],spawn=0,jump=0,last=0;
-let best=0;try{best=+(localStorage.getItem('coinrushBest')||0)}catch(e){} $('best').textContent=best;
-const laneX=[94,180,266];
-function start(){active=true;lane=1;coins=0;dist=0;speed=3;items=[];spawn=0;jump=0;$('coins').textContent=0;$('distance').textContent=0;$('start').textContent='התחל מחדש';last=performance.now();requestAnimationFrame(step)}
-function move(n){if(active)lane=Math.max(0,Math.min(2,lane+n))}
-function hop(){if(active&&jump<=0)jump=22}
-$('start').onclick=start;$('left').onclick=()=>move(-1);$('right').onclick=()=>move(1);$('jump').onclick=hop;
-document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')move(-1);if(e.key==='ArrowRight')move(1);if(e.key==='ArrowUp'||e.key===' ')hop()});
-let tx=0,ty=0;canvas.addEventListener('touchstart',e=>{tx=e.changedTouches[0].clientX;ty=e.changedTouches[0].clientY},{passive:true});
-canvas.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1);else if(dy<0)hop()},{passive:true});
-function draw(){
-ctx.clearRect(0,0,360,540);let g=ctx.createLinearGradient(0,0,0,540);g.addColorStop(0,'#79d9ff');g.addColorStop(1,'#d9f99d');ctx.fillStyle=g;ctx.fillRect(0,0,360,540);
-ctx.fillStyle='#4d9b55';ctx.fillRect(0,150,360,390);
-ctx.fillStyle='#3f4657';ctx.beginPath();ctx.moveTo(45,540);ctx.lineTo(115,145);ctx.lineTo(245,145);ctx.lineTo(315,540);ctx.closePath();ctx.fill();
-ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.setLineDash([16,17]);ctx.beginPath();ctx.moveTo(137,540);ctx.lineTo(157,145);ctx.moveTo(223,540);ctx.lineTo(203,145);ctx.stroke();ctx.setLineDash([]);
-for(let i=0;i<7;i++){let y=(i*92+dist*1.5)%540;ctx.fillStyle='#28784a';ctx.beginPath();ctx.arc(23,y,14,0,7);ctx.arc(338,y+20,15,0,7);ctx.fill()}
-items.forEach(it=>{ctx.textAlign='center';ctx.font='26px Arial';ctx.fillText(it.type==='coin'?'🪙':'🚧',laneX[it.lane],it.y)});
-const py=438-(jump>0?Math.sin((22-jump)/22*Math.PI)*70:0);ctx.font='42px Arial';ctx.textAlign='center';ctx.fillText('🏃',laneX[lane],py);
-if(!active){ctx.fillStyle='#102039dd';ctx.fillRect(35,205,290,95);ctx.fillStyle='white';ctx.font='bold 22px Arial';ctx.fillText(coins?'המשחק הסתיים!':'מוכנים למרוץ?',180,245);ctx.font='16px Arial';ctx.fillText(coins?'אספת '+coins+' מטבעות':'לחצו על ״התחל משחק״',180,275)}
-}
-function step(now){if(!active){draw();return}const dt=Math.min(2,(now-last)/16.67);last=now;spawn+=dt;dist+=speed*dt*.055;speed=Math.min(7,3+dist/260);
-if(spawn>24/speed){spawn=0;items.push({lane:Math.floor(Math.random()*3),y:145,type:Math.random()<.68?'coin':'obstacle'})}
-for(let i=items.length-1;i>=0;i--){const it=items[i];it.y+=speed*dt*1.65;if(it.lane===lane&&it.y>405&&it.y<465){if(it.type==='coin'){coins++;$('coins').textContent=coins;items.splice(i,1)}else if(jump<7){active=false;$('start').textContent='נסה שוב';if(coins>best){best=coins;$('best').textContent=best;try{localStorage.setItem('coinrushBest',best)}catch(e){}}break}else items.splice(i,1)}else if(it.y>570)items.splice(i,1)}
-if(jump>0)jump=Math.max(0,jump-dt);$('distance').textContent=Math.floor(dist);draw();if(active)requestAnimationFrame(step)
-}
-draw();
-if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
-</script></body></html>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pong Game</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --line: #94a3b8;
+      --paddle: #f8fafc;
+      --ball: #fbbf24;
+      --text: #e2e8f0;
+      --score: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, #1e293b, var(--bg));
+      color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+
+    .game-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 20px;
+    }
+
+    .scoreboard {
+      width: min(80vw, 800px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.9);
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 22px;
+      font-weight: bold;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: clamp(1rem, 2vw, 1.4rem);
+    }
+
+    canvas {
+      display: block;
+      width: min(80vw, 800px);
+      height: auto;
+      background: #08111d;
+      border: 3px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 0 30px rgba(148, 163, 184, 0.2);
+      cursor: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrap">
+    <div class="scoreboard">
+      <div>Player: <span id="playerScore">0</span></div>
+      <div>Computer: <span id="computerScore">0</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const playerScoreEl = document.getElementById('playerScore');
+    const computerScoreEl = document.getElementById('computerScore');
+
+    const paddleWidth = 14;
+    const paddleHeight = 100;
+    const ballRadius = 8;
+
+    let playerScore = 0;
+    let computerScore = 0;
+
+    const leftPaddle = {
+      x: 20,
+      y: canvas.height / 2 - paddleHeight / 2,
+      width: paddleWidth,
+      height: paddleHeight,
+      speed: 8
+    };
+
+    const rightPaddle = {
+      x: canvas.width - 20 - paddleWidth,
+      y: canvas.height / 2 - paddleHeight / 2,
+      width: paddleWidth,
+      height: paddleHeight,
+      speed: 5.2
+    };
+
+    const ball = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      radius: ballRadius,
+      speedX: 5,
+      speedY: 4
+    };
+
+    const keys = {
+      ArrowUp: false,
+      ArrowDown: false
+    };
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function updateScores() {
+      playerScoreEl.textContent = playerScore;
+      computerScoreEl.textContent = computerScore;
+    }
+
+    function resetBall(direction) {
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+
+      const angle = (Math.random() * 1.4) - 0.7;
+      const speed = 5.5;
+
+      ball.speedX = direction * speed * Math.cos(angle);
+      ball.speedY = speed * Math.sin(angle);
+    }
+
+    function update() {
+      if (keys.ArrowUp) leftPaddle.y -= leftPaddle.speed;
+      if (keys.ArrowDown) leftPaddle.y += leftPaddle.speed;
+
+      leftPaddle.y = clamp(leftPaddle.y, 0, canvas.height - leftPaddle.height);
+
+      const paddleCenter = rightPaddle.y + rightPaddle.height / 2;
+      if (paddleCenter < ball.y - 18) {
+        rightPaddle.y += rightPaddle.speed;
+      } else if (paddleCenter > ball.y + 18) {
+        rightPaddle.y -= rightPaddle.speed;
+      }
+
+      rightPaddle.y = clamp(rightPaddle.y, 0, canvas.height - rightPaddle.height);
+
+      ball.x += ball.speedX;
+      ball.y += ball.speedY;
+
+      if (ball.y - ball.radius <= 0) {
+        ball.y = ball.radius;
+        ball.speedY *= -1;
+      }
+
+      if (ball.y + ball.radius >= canvas.height) {
+        ball.y = canvas.height - ball.radius;
+        ball.speedY *= -1;
+      }
+
+      if (
+        ball.x - ball.radius <= leftPaddle.x + leftPaddle.width &&
+        ball.x + ball.radius >= leftPaddle.x &&
+        ball.y >= leftPaddle.y &&
+        ball.y <= leftPaddle.y + leftPaddle.height &&
+        ball.speedX < 0
+      ) {
+        const relativeIntersectY = (ball.y - (leftPaddle.y + leftPaddle.height / 2)) / (leftPaddle.height / 2);
+        const bounceAngle = relativeIntersectY * (Math.PI / 3);
+        const speed = Math.hypot(ball.speedX, ball.speedY) + 0.3;
+
+        ball.speedX = speed * Math.cos(bounceAngle);
+        ball.speedY = speed * Math.sin(bounceAngle);
+        ball.x = leftPaddle.x + leftPaddle.width + ball.radius;
+      }
+
+      if (
+        ball.x + ball.radius >= rightPaddle.x &&
+        ball.x - ball.radius <= rightPaddle.x + rightPaddle.width &&
+        ball.y >= rightPaddle.y &&
+        ball.y <= rightPaddle.y + rightPaddle.height &&
+        ball.speedX > 0
+      ) {
+        const relativeIntersectY = (ball.y - (rightPaddle.y + rightPaddle.height / 2)) / (rightPaddle.height / 2);
+        const bounceAngle = relativeIntersectY * (Math.PI / 3);
+        const speed = Math.hypot(ball.speedX, ball.speedY) + 0.3;
+
+        ball.speedX = -speed * Math.cos(bounceAngle);
+        ball.speedY = speed * Math.sin(bounceAngle);
+        ball.x = rightPaddle.x - ball.radius;
+      }
+
+      if (ball.x + ball.radius < 0) {
+        computerScore++;
+        updateScores();
+        resetBall(1);
+      }
+
+      if (ball.x - ball.radius > canvas.width) {
+        playerScore++;
+        updateScores();
+        resetBall(-1);
+      }
+    }
+
+    function drawCenterLine() {
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.8)';
+      ctx.setLineDash([12, 12]);
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawPaddle(x, y, width, height) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(x, y, width, height);
+    }
+
+    function drawBall(x, y, radius) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#08111d';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawCenterLine();
+      drawPaddle(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height);
+      drawPaddle(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
+      drawBall(ball.x, ball.y, ball.radius);
+    }
+
+    canvas.addEventListener('mousemove', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseY = event.clientY - rect.top;
+      leftPaddle.y = mouseY - leftPaddle.height / 2;
+      leftPaddle.y = clamp(leftPaddle.y, 0, canvas.height - leftPaddle.height);
+    });
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        keys[event.key] = true;
+      }
+    });
+
+    window.addEventListener('keyup', (event) => {
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        keys[event.key] = false;
+      }
+    });
+
+    updateScores();
+    resetBall(1);
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
